@@ -1,0 +1,637 @@
+esphome:
+  name: ir2ha
+  friendly_name: 红外接收网关
+
+  on_boot:
+    priority: 600 # Higher priority means it runs earlier
+    then:
+      - switch.turn_off:
+          id: samsung_power_button_ir
+      - switch.turn_off:
+          id: voice2ir_sensor_1
+      - switch.turn_off:
+          id: voice2ir_sensor_2
+      - switch.turn_off:
+          id: voice2ir_sensor_3
+      - switch.turn_off:
+          id: voice2ir_sensor_4
+      - switch.turn_off:
+          id: voice2ir_sensor_5
+      - switch.turn_off:
+          id: voice2ir_sensor_6
+      - switch.turn_off:
+          id: voice2ir_sensor_7
+      - switch.turn_off:
+          id: voice2ir_sensor_8
+      - switch.turn_off:
+          id: voice2ir_sensor_9
+      - switch.turn_off:
+          id: voice2ir_sensor_10
+      - switch.turn_off:
+          id: voice2ir_sensor_11
+      - switch.turn_off:
+          id: voice2ir_sensor_12
+      - switch.turn_off:
+          id: voice2ir_sensor_13
+      - switch.turn_off:
+          id: voice2ir_sensor_14
+      - switch.turn_off:
+          id: voice2ir_sensor_15
+      - switch.turn_off:
+          id: voice2ir_sensor_16
+      - switch.turn_off:
+          id: voice2ir_sensor_17
+      - switch.turn_off:
+          id: voice2ir_sensor_18
+      - switch.turn_off:
+          id: voice2ir_sensor_19
+      - switch.turn_off:
+          id: voice2ir_sensor_20
+      - switch.turn_off:
+          id: voice2ir_sensor_21
+      - switch.turn_off:
+          id: voice2ir_sensor_22
+      - switch.turn_off:
+          id: voice2ir_sensor_23
+      - switch.turn_off:
+          id: voice2ir_sensor_24
+      - switch.turn_off:
+          id: voice2ir_sensor_25
+      - switch.turn_off:
+          id: voice2ir_sensor_26
+      - switch.turn_off:
+          id: voice2ir_sensor_27
+      - switch.turn_off:
+          id: voice2ir_sensor_28
+      - switch.turn_off:
+          id: voice2ir_sensor_29
+      - switch.turn_off:
+          id: voice2ir_sensor_30
+      - switch.turn_off:
+          id: voice2ir_sensor_31
+      - switch.turn_off:
+          id: voice2ir_sensor_32
+      - switch.turn_off:
+          id: voice2ir_sensor_33
+      - switch.turn_off:
+          id: voice2ir_sensor_34
+      - switch.turn_off:
+          id: voice2ir_sensor_35
+      - switch.turn_off:
+          id: voice2ir_sensor_36
+      - switch.turn_off:
+          id: voice2ir_sensor_37
+      - switch.turn_off:
+          id: voice2ir_sensor_38
+      - switch.turn_off:
+          id: voice2ir_sensor_39
+
+esp8266:
+  board: nodemcuv2
+  framework:
+    version: latest
+# ==========================================================
+# 日志、API、OTA 配置
+# ==========================================================
+logger:
+  level: ERROR
+
+api:
+  encryption:
+    key: !secret esphome_api_key_encryption
+
+ota:
+  - platform: esphome
+    password: !secret esphome_ota_password
+
+# ==========================================================
+# 网络配置
+# 使用 !secret 从 secrets.yaml 文件中读取信息
+# ==========================================================
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  manual_ip:
+    static_ip: 10.152.6.81
+    gateway: 10.152.6.1
+    subnet: 255.255.255.0
+  ap:
+    ssid: "Ir2Ha Fallback Hotspot"
+    password: !secret ap_password
+
+captive_portal:
+
+# ==========================================================
+# 核心功能：红外接收器配置
+# ==========================================================
+remote_receiver:
+  pin:
+    number: D4
+    inverted: True
+    mode: INPUT_PULLUP
+  dump: all
+  on_nec:
+    then:
+      - homeassistant.event:
+          event: esphome.ir_received
+          data_template:
+            protocol: "NEC"
+            address: "{{ nec_address }}"
+            command: "{{ nec_command }}"
+          variables:
+            nec_address: !lambda 'return x.address;'
+            nec_command: !lambda 'return x.command;'
+  on_panasonic:
+    then:
+      - homeassistant.event:
+          event: esphome.ir_received
+          data_template:
+            protocol: "Panasonic"
+            address: "{{ panasonic_address }}"
+            command: "{{ panasonic_command }}"
+          variables:
+            panasonic_address: !lambda 'return x.address;'
+            panasonic_command: !lambda 'return x.command;'
+  on_sony:
+    then:
+      - homeassistant.event:
+          event: esphome.ir_received
+          data_template:
+            protocol: "Sony"
+            data: "{{ sony_data }}"
+            nbits: "{{ sony_nbits }}"
+          variables:
+            sony_data: !lambda 'return x.data;'
+            sony_nbits: !lambda 'return x.nbits;'
+  on_samsung:
+    then:
+      - homeassistant.event:
+          event: esphome.ir_received
+          data_template:
+            protocol: "Samsung"
+            data: "{{ samsung_data }}"
+            nbits: "{{ samsung_nbits }}"
+          variables:
+            samsung_data: !lambda 'return x.data;'
+            samsung_nbits: !lambda 'return x.nbits;'
+      - if:
+          condition:
+            lambda: 'return x.data == 0xE0E040BF;'
+          then:
+            - switch.turn_on:
+                id: samsung_power_button_ir
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980001;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_1
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980002;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_2
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980003;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_3
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980004;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_4
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980005;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_5
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980006;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_6
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980007;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_7
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980008;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_8
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980009;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_9
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980010;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_10
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980011;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_11
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980012;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_12
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980013;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_13
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980014;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_14
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980015;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_15
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980016;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_16
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980017;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_17
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980018;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_18
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980019;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_19
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980020;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_20
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980021;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_21
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980022;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_22
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980023;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_23
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980024;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_24
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980025;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_25
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980026;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_26
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980027;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_27
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980028;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_28
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980029;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_29
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980030;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_30
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980031;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_31
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980032;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_32
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980033;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_33
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980034;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_34
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980035;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_35
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980036;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_36
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980037;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_37
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980038;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_38
+      - if:
+          condition:
+            lambda: 'return x.data == 0xF0980039;'
+          then:
+            - switch.turn_on:
+                id: voice2ir_sensor_39
+  on_jvc:
+    then:
+      - homeassistant.event:
+          event: esphome.ir_received
+          data_template:
+            protocol: "JVC"
+            data: "{{ jvc_data }}"
+          variables:
+            jvc_data: !lambda 'return x.data;'
+  on_rc5:
+    then:
+      - homeassistant.event:
+          event: esphome.ir_received
+          data_template:
+            protocol: "RC5"
+            address: "{{ rc5_address }}"
+            command: "{{ rc5_command }}"
+          variables:
+            rc5_address: !lambda 'return x.address;'
+            rc5_command: !lambda 'return x.command;'
+
+switch:
+  - platform: template
+    name: "三星电源按钮 IR"
+    id: samsung_power_button_ir
+    optimistic: true
+
+  - platform: template
+    name: "语音-客厅灯_ON"
+    id: voice2ir_sensor_1
+    optimistic: true
+
+  - platform: template
+    name: "语音-客厅灯_OFF"
+    id: voice2ir_sensor_2
+    optimistic: true
+
+  - platform: template
+    name: "语音-次卧主灯_ON"
+    id: voice2ir_sensor_3
+    optimistic: true
+
+  - platform: template
+    name: "语音-次卧主灯_OFF"
+    id: voice2ir_sensor_4
+    optimistic: true
+
+  - platform: template
+    name: "语音-次卧小灯1_ON"
+    id: voice2ir_sensor_5
+    optimistic: true
+
+  - platform: template
+    name: "语音-次卧小灯1_OFF"
+    id: voice2ir_sensor_6
+    optimistic: true
+
+  - platform: template
+    name: "语音-门口灯1_ON"
+    id: voice2ir_sensor_7
+    optimistic: true
+
+  - platform: template
+    name: "语音-门口灯1_OFF"
+    id: voice2ir_sensor_8
+    optimistic: true
+
+  - platform: template
+    name: "语音-旧门口灯0_ON"
+    id: voice2ir_sensor_9
+    optimistic: true
+
+  - platform: template
+    name: "语音-旧门口灯0_OFF"
+    id: voice2ir_sensor_10
+    optimistic: true
+
+  - platform: template
+    name: "语音-门口1插座_ON"
+    id: voice2ir_sensor_11
+    optimistic: true
+
+  - platform: template
+    name: "语音-门口1插座_OFF"
+    id: voice2ir_sensor_12
+    optimistic: true
+
+  - platform: template
+    name: "语音-厨房1插座1_ON"
+    id: voice2ir_sensor_13
+    optimistic: true
+
+  - platform: template
+    name: "语音-厨房1插座1_OFF"
+    id: voice2ir_sensor_14
+    optimistic: true
+
+  - platform: template
+    name: "语音-餐桌旁插座_ON"
+    id: voice2ir_sensor_15
+    optimistic: true
+
+  - platform: template
+    name: "语音-餐桌旁插座_OFF"
+    id: voice2ir_sensor_16
+    optimistic: true
+
+  - platform: template
+    name: "语音-过道0左灯1_ON"
+    id: voice2ir_sensor_17
+    optimistic: true
+
+  - platform: template
+    name: "语音-过道0左灯1_OFF"
+    id: voice2ir_sensor_18
+    optimistic: true
+
+  - platform: template
+    name: "语音-过道0右灯01_ON"
+    id: voice2ir_sensor_19
+    optimistic: true
+
+  - platform: template
+    name: "语音-过道0右灯01_OFF"
+    id: voice2ir_sensor_20
+    optimistic: true
+
+  - platform: template
+    name: "语音-次卧米家1X风扇_电源ON"
+    id: voice2ir_sensor_21
+    optimistic: true
+
+  - platform: template
+    name: "语音-次卧米家1X风扇_电源OFF"
+    id: voice2ir_sensor_22
+    optimistic: true
+
+  - platform: template
+    name: "语音-次卧米家1X风扇_摇头1ON"
+    id: voice2ir_sensor_23
+    optimistic: true
+
+  - platform: template
+    name: "语音-次卧米家1X风扇_摇头1OFF"
+    id: voice2ir_sensor_24
+    optimistic: true
+
+  - platform: template
+    name: "语音-次卧米家1X风扇_循环切换挡位ON"
+    id: voice2ir_sensor_25
+    optimistic: true
+
+  - platform: template
+    name: "语音-次卧米家1X风扇1_循环切换模式ON"
+    id: voice2ir_sensor_26
+    optimistic: true
+
+  - platform: template
+    name: "语音功能27"
+    id: voice2ir_sensor_27
+    optimistic: true
+
+  - platform: template
+    name: "语音功能28"
+    id: voice2ir_sensor_28
+    optimistic: true
+
+  - platform: template
+    name: "语音功能29"
+    id: voice2ir_sensor_29
+    optimistic: true
+
+  - platform: template
+    name: "语音功能30"
+    id: voice2ir_sensor_30
+    optimistic: true
+
+  - platform: template
+    name: "语音功能31"
+    id: voice2ir_sensor_31
+    optimistic: true
+
+  - platform: template
+    name: "语音功能32"
+    id: voice2ir_sensor_32
+    optimistic: true
+
+  - platform: template
+    name: "语音功能33"
+    id: voice2ir_sensor_33
+    optimistic: true
+
+  - platform: template
+    name: "语音功能34"
+    id: voice2ir_sensor_34
+    optimistic: true
+
+  - platform: template
+    name: "语音功能35"
+    id: voice2ir_sensor_35
+    optimistic: true
+
+  - platform: template
+    name: "语音功能36"
+    id: voice2ir_sensor_36
+    optimistic: true
+
+  - platform: template
+    name: "语音功能37"
+    id: voice2ir_sensor_37
+    optimistic: true
+
+  - platform: template
+    name: "语音功能38"
+    id: voice2ir_sensor_38
+    optimistic: true
+
+  - platform: template
+    name: "语音功能39"
+    id: voice2ir_sensor_39
+    optimistic: true
